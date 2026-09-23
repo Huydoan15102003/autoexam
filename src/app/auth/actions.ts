@@ -56,7 +56,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const auth = await getAuth()
   if (!auth) return fail(NETWORK_ERROR)
 
-  const origin = (await headers()).get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL
+  const origin = (await headers()).get('origin') ?? process.env.SITE_URL
   const { data, error } = await auth.signUp({
     email,
     password,

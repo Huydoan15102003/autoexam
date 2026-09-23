@@ -7,8 +7,8 @@ const AUTH_PAGES = ['/login', '/signup']
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY
   // ponytail: Supabase not configured yet -> skip session refresh so public pages still render
   if (!url || !key) return supabaseResponse
 

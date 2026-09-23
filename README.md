@@ -25,9 +25,9 @@ The app builds and the public pages render without any env vars; auth needs the 
 
 | Variable | Purpose |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_…`) |
-| `NEXT_PUBLIC_SITE_URL` | Public URL, fallback for email confirmation links |
+| `SUPABASE_URL` | Supabase Project URL |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_…`) |
+| `SITE_URL` | Public URL, fallback for email confirmation links |
 | `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech (pronunciation assessment) |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | OpenAI content scoring (default `gpt-5-mini`) |
 | `SPEAKING_DAILY_LIMIT`, `WRITING_DAILY_LIMIT` | Max assessed recordings / essays per user per 24 h (default 30 each) |
@@ -38,8 +38,8 @@ The app builds and the public pages render without any env vars; auth needs the 
 2. Open **SQL Editor** and run every file in `supabase/migrations/` **in order** (`0001_profiles.sql`, `0002_speaking_attempts.sql`, `0003_writing_attempts.sql`). The scripts are safe to re-run.
 3. Go to **Project Settings → API** (or **Connect**) and copy the **Project URL** and the **publishable key** into `.env.local` (and later into Vercel):
    ```
-   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   SUPABASE_URL=https://<ref>.supabase.co
+   SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
    ```
 4. **Authentication → URL Configuration**:
    - **Site URL** = your production URL, e.g. `https://autoexam.vercel.app`.
@@ -57,8 +57,8 @@ The app builds and the public pages render without any env vars; auth needs the 
 
 1. Push the repository to GitHub (`.env.local` is git-ignored; `.env.example` is committed).
 2. In Vercel, **Add New → Project**, import the GitHub repo (framework preset: Next.js, defaults are fine).
-3. Under **Settings → Environment Variables** add: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL` (the production URL), `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and optionally `SPEAKING_DAILY_LIMIT` / `WRITING_DAILY_LIMIT`.
-4. Deploy. `NEXT_PUBLIC_*` values are inlined at build time, so **redeploy** after changing them.
+3. Under **Settings → Environment Variables** add: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SITE_URL` (the production URL), `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and optionally `SPEAKING_DAILY_LIMIT` / `WRITING_DAILY_LIMIT`.
+4. Deploy. After changing any environment variable, **redeploy** so the new values are picked up.
 5. Put the production URL into Supabase **Site URL** / **Redirect URLs** (step 4 above), then run the acceptance flow in an incognito window: sign up → (confirm email) → log in → dashboard shows email + full name → reload / new tab stays logged in → log out → `/dashboard` redirects to `/login`.
 
 ## Speaking assessment
