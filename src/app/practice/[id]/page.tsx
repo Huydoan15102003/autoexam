@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { AssessmentResultView } from '@/components/speaking/assessment-result'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getClaims } from '@/lib/supabase/server'
 import type { AssessmentResult } from '@/lib/speaking/types'
 
 export const metadata: Metadata = { title: 'Kết quả luyện nói' }
@@ -11,12 +11,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default async function AttemptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!(await getClaims())) redirect('/login')
   if (!UUID.test(id)) notFound()
+  const supabase = await createClient()
 
   // ponytail: RLS limits rows to the owner; a query error (e.g. table not migrated) also renders 404
   const { data: row } = await supabase

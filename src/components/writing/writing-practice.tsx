@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { WritingResultView } from '@/components/writing/writing-result'
+import { savedId, type SavedQuestion } from '@/lib/questions'
 import { TASK1_PROMPTS, TASK2_PROMPTS, type WritingPrompt } from '@/lib/writing/tasks'
 import {
   EXPECTED_WORDS,
@@ -28,18 +29,18 @@ const secondary =
 const input =
   'w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/20'
 
-const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 // ponytail: whitespace split for the live counter; the server's wordCount is authoritative
 const countWords = (s: string) => s.split(/\s+/).filter(Boolean).length
 
 const draftKey = (t: WritingTask) => `autoexam:writing-draft:${t}`
 const emptyDraft = (t: WritingTask): Draft => ({ promptId: PROMPTS[t][0].id, customPrompt: '', essay: '' })
 
-function loadDraft(t: WritingTask): Draft | null {
+// `ids`: prompt ids still selectable for this task (built-in + saved); a draft pointing elsewhere falls back.
+function loadDraft(t: WritingTask, ids: string[]): Draft | null {
   try {
     const d = JSON.parse(localStorage.getItem(draftKey(t)) ?? 'null')
     if (!d || typeof d !== 'object') return null
-    const known = d.promptId === CUSTOM || PROMPTS[t].some((p) => p.id === d.promptId)
+    const known = d.promptId === CUSTOM || ids.includes(d.promptId)
     return {
       promptId: known ? d.promptId : PROMPTS[t][0].id,
       customPrompt: typeof d.customPrompt === 'string' ? d.customPrompt.slice(0, WRITING_PROMPT_MAX_CHARS) : '',
@@ -59,50 +60,51 @@ function saveDraft(t: WritingTask, d: Draft | null) {
   }
 }
 
-export function WritingPractice() {
+const mineFor = (saved: SavedQuestion[], t: WritingTask): WritingPrompt[] =>
+  saved.filter((q) => q.kind === t).map((q) => ({ id: savedId(q.id), title: q.title, prompt: q.content }))
+
+// `saved`: the user's own task1/task2 questions; `initialId` (from ?q=) preselects one of them.
+export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; initialId?: string }) {
   const router = useRouter()
 
-  const [task, setTask] = useState<WritingTask>('task1')
-  const [drafts, setDrafts] = useState<Record<WritingTask, Draft>>({
-    task1: emptyDraft('task1'),
-    task2: emptyDraft('task2'),
+  // frozen at mount: the draft restore below runs once against these
+  const [boot] = useState(() => {
+    const init = saved.find((q) => q.id === initialId)
+    const task: WritingTask = init?.kind === 'task2' ? 'task2' : 'task1'
+    const ids = (t: WritingTask) => [...PROMPTS[t], ...mineFor(saved, t)].map((p) => p.id)
+    return { task, pick: init ? savedId(init.id) : null, ids: { task1: ids('task1'), task2: ids('task2') } }
+  })
+  const [task, setTask] = useState<WritingTask>(boot.task)
+  const [drafts, setDrafts] = useState<Record<WritingTask, Draft>>(() => {
+    const d = { task1: emptyDraft('task1'), task2: emptyDraft('task2') }
+    if (boot.pick) d[boot.task].promptId = boot.pick
+    return d
   })
   const [status, setStatus] = useState<Status>('idle')
-  const [waitSec, setWaitSec] = useState(0)
-  const [startedAt, setStartedAt] = useState<number | null>(null)
-  const [now, setNow] = useState(0)
   const [error, setError] = useState<{ message: string; login?: boolean } | null>(null)
   const [response, setResponse] = useState<WritingAssessResponse | null>(null)
 
   const draft = drafts[task]
   const isCustom = draft.promptId === CUSTOM
-  const picked = PROMPTS[task].find((p) => p.id === draft.promptId)
+  const mine = mineFor(saved, task)
+  const picked = [...PROMPTS[task], ...mine].find((p) => p.id === draft.promptId)
   const prompt = isCustom ? draft.customPrompt.trim() : (picked?.prompt ?? '')
   const words = countWords(draft.essay)
   const [min, max] = EXPECTED_WORDS[task]
-  const elapsed = startedAt === null ? 0 : Math.max(0, Math.floor((now - startedAt) / 1000))
   const busy = status === 'submitting'
 
   // restore drafts after mount: localStorage doesn't exist during SSR, reading it in render would break hydration
   useEffect(() => {
-    const t1 = loadDraft('task1')
-    const t2 = loadDraft('task2')
+    const t1 = loadDraft('task1', boot.ids.task1)
+    const t2 = loadDraft('task2', boot.ids.task2)
+    // a ?q= link wins over the stored draft's prompt choice (the essay text is kept)
+    if (boot.pick) {
+      const t = boot.task === 'task1' ? t1 : t2
+      if (t) t.promptId = boot.pick
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from an external store
     if (t1 || t2) setDrafts((d) => ({ task1: t1 ?? d.task1, task2: t2 ?? d.task2 }))
-  }, [])
-
-  useEffect(() => {
-    if (startedAt === null || status !== 'idle') return
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [startedAt, status])
-
-  useEffect(() => {
-    if (status !== 'submitting') return
-    const t0 = Date.now()
-    const id = setInterval(() => setWaitSec(Math.floor((Date.now() - t0) / 1000)), 1000)
-    return () => clearInterval(id)
-  }, [status])
+  }, [boot])
 
   function update(patch: Partial<Draft>) {
     const next = { ...draft, ...patch }
@@ -118,7 +120,6 @@ export function WritingPractice() {
 
   function again() {
     reset()
-    setStartedAt(null)
   }
 
   function switchTask(t: WritingTask) {
@@ -135,7 +136,6 @@ export function WritingPractice() {
     if (words < min && !window.confirm('Bài viết chưa đủ số từ khuyến nghị. Vẫn nộp?')) return
     const t = task
     setError(null)
-    setWaitSec(0)
     setStatus('submitting')
 
     try {
@@ -195,9 +195,14 @@ export function WritingPractice() {
         </p>
 
         <div className="mt-5">
-          <label htmlFor="prompt-id" className="text-sm font-medium text-slate-700">
-            Chọn đề bài
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label htmlFor="prompt-id" className="text-sm font-medium text-slate-700">
+              Chọn đề bài
+            </label>
+            <Link href={`/questions?kind=${task}`} className="text-sm font-medium text-blue-700 hover:underline">
+              + Tạo câu hỏi của bạn
+            </Link>
+          </div>
           <select
             id="prompt-id"
             className={`${input} mt-1 bg-white`}
@@ -208,12 +213,23 @@ export function WritingPractice() {
               reset()
             }}
           >
-            {PROMPTS[task].map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-            <option value={CUSTOM}>Tự nhập…</option>
+            <optgroup label="Đề mẫu">
+              {PROMPTS[task].map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </optgroup>
+            {mine.length > 0 && (
+              <optgroup label="Câu hỏi của tôi">
+                {mine.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <option value={CUSTOM}>Tự nhập (không lưu)…</option>
           </select>
         </div>
 
@@ -272,14 +288,9 @@ export function WritingPractice() {
             <label htmlFor="essay" className="text-lg font-semibold">
               Bài viết
             </label>
-            <div className="flex flex-wrap gap-4 text-sm tabular-nums">
-              <span className={`font-medium ${wordTone}`}>
-                {words} / {min}–{max} từ
-              </span>
-              <span className={elapsed > MINUTES[task] * 60 ? 'text-amber-600' : 'text-slate-500'}>
-                ⏱ {mmss(elapsed)} · gợi ý {MINUTES[task]} phút
-              </span>
-            </div>
+            <span className={`text-sm font-medium tabular-nums ${wordTone}`}>
+              {words} / {min}–{max} từ
+            </span>
           </div>
           <textarea
             id="essay"
@@ -287,14 +298,7 @@ export function WritingPractice() {
             maxLength={WRITING_MAX_CHARS}
             disabled={busy}
             value={draft.essay}
-            onChange={(e) => {
-              if (startedAt === null) {
-                const t = Date.now()
-                setStartedAt(t)
-                setNow(t)
-              }
-              update({ essay: e.target.value })
-            }}
+            onChange={(e) => update({ essay: e.target.value })}
             placeholder="Viết bài của bạn bằng tiếng Anh…"
             className={`${input} mt-3 leading-relaxed`}
             lang="en"
@@ -323,7 +327,7 @@ export function WritingPractice() {
                 aria-hidden
               />
               <span>
-                Đang chấm bài viết… {waitSec} giây
+                Đang chấm bài viết…
                 <span className="block text-xs text-blue-700/80">Quá trình này có thể mất 10–40 giây.</span>
               </span>
             </div>

@@ -1,23 +1,7 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import type { AssessmentResult, ErrorType, WordResult } from '@/lib/speaking/types'
-
-const noopSubscribe = () => () => {}
-
-// false on the server and first hydration pass, so SSR markup always matches
-export function useCanSpeak() {
-  return useSyncExternalStore(noopSubscribe, () => 'speechSynthesis' in window, () => false)
-}
-
-export function speak(text: string) {
-  if (!('speechSynthesis' in window)) return
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-US'
-  u.rate = 0.9
-  window.speechSynthesis.speak(u)
-}
 
 const tone = (s: number) => (s >= 80 ? 0 : s >= 60 ? 1 : 2)
 const STROKE = ['stroke-emerald-500', 'stroke-amber-500', 'stroke-red-500']
@@ -43,8 +27,6 @@ const ERROR_LABEL: Record<ErrorType, string> = {
 }
 
 const card = 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm'
-const smallBtn =
-  'rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50'
 
 export function Ring({
   score,
@@ -116,7 +98,7 @@ function wordClass(w: WordResult) {
   }
 }
 
-function Words({ words, canSpeak }: { words: WordResult[]; canSpeak: boolean }) {
+function Words({ words }: { words: WordResult[] }) {
   const [selected, setSelected] = useState<number | null>(null)
   const sel = selected === null ? null : words[selected]
 
@@ -158,11 +140,6 @@ function Words({ words, canSpeak }: { words: WordResult[]; canSpeak: boolean }) 
               {clamp(sel.accuracy)}/100
             </span>
             <span className="text-sm text-slate-500">{ERROR_LABEL[sel.errorType]}</span>
-            {canSpeak && (
-              <button type="button" onClick={() => speak(sel.word)} className={`${smallBtn} ml-auto`}>
-                🔊 Nghe
-              </button>
-            )}
           </div>
           {sel.phonemes.length ? (
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -189,7 +166,6 @@ function Words({ words, canSpeak }: { words: WordResult[]; canSpeak: boolean }) 
 }
 
 export function AssessmentResultView({ result }: { result: AssessmentResult }) {
-  const canSpeak = useCanSpeak()
   const p = result.pronunciation
   const c = result.content
 
@@ -224,7 +200,7 @@ export function AssessmentResultView({ result }: { result: AssessmentResult }) {
 
       <section className={card}>
         <h2 className="text-lg font-semibold">Chi tiết phát âm từng từ</h2>
-        <p className="mt-1 text-sm text-slate-500">Bấm vào một từ để xem điểm từng âm và nghe phát âm mẫu.</p>
+        <p className="mt-1 text-sm text-slate-500">Bấm vào một từ để xem điểm từng âm.</p>
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
           <li className="flex items-center gap-1.5">
             <span className="rounded bg-red-50 px-1 text-red-600 underline decoration-red-500">abc</span> Phát âm sai
@@ -247,7 +223,7 @@ export function AssessmentResultView({ result }: { result: AssessmentResult }) {
           </li>
         </ul>
         <div className="mt-4">
-          <Words words={p.words} canSpeak={canSpeak} />
+          <Words words={p.words} />
         </div>
         <div className="mt-6 border-t border-slate-100 pt-4">
           <h3 className="text-sm font-semibold text-slate-700">Bạn đã nói</h3>
@@ -296,14 +272,7 @@ export function AssessmentResultView({ result }: { result: AssessmentResult }) {
 
           {c.improvedAnswer && (
             <div className="mt-6">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold">Câu trả lời gợi ý</h3>
-                {canSpeak && (
-                  <button type="button" onClick={() => speak(c.improvedAnswer)} className={smallBtn}>
-                    🔊 Nghe
-                  </button>
-                )}
-              </div>
+              <h3 className="font-semibold">Câu trả lời gợi ý</h3>
               <p lang="en" className="mt-2 whitespace-pre-line rounded-xl bg-blue-50 p-4 leading-relaxed text-slate-800">
                 {c.improvedAnswer}
               </p>

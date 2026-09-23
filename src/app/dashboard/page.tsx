@@ -1,23 +1,25 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { signOut } from '@/app/auth/actions'
 import { AttemptHistory } from '@/components/speaking/attempt-history'
 import { WritingHistory } from '@/components/writing/writing-history'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getClaims } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const claims = await getClaims()
+  if (!claims) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-  const fullName: string = profile?.full_name || user.user_metadata.full_name || ''
-  const createdAt = new Date(user.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+  // profiles row is created by the sign-up trigger, so its created_at is the account creation date
+  const supabase = await createClient()
+  const { data: profile } = await supabase.from('profiles').select('full_name, created_at').eq('id', claims.sub).single()
+  const fullName: string = profile?.full_name || claims.user_metadata?.full_name || ''
+  const createdAt = profile
+    ? new Date(profile.created_at).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+    : '—'
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
@@ -46,7 +48,7 @@ export default async function DashboardPage() {
             </div>
             <div>
               <dt className="text-slate-500">Email</dt>
-              <dd className="break-all font-medium">{user.email}</dd>
+              <dd className="break-all font-medium">{claims.email}</dd>
             </div>
             <div>
               <dt className="text-slate-500">Ngày tạo tài khoản</dt>
@@ -73,6 +75,12 @@ export default async function DashboardPage() {
             >
               Bắt đầu luyện viết
             </Link>
+            <Link
+              href="/questions"
+              className="rounded-lg border border-white/60 px-5 py-2.5 font-semibold text-white hover:bg-white/10"
+            >
+              Câu hỏi của tôi
+            </Link>
           </div>
         </section>
       </div>
@@ -86,7 +94,9 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4">
-            <AttemptHistory limit={5} />
+            <Suspense fallback={<p className="text-sm text-slate-500">Đang tải…</p>}>
+              <AttemptHistory limit={5} />
+            </Suspense>
           </div>
         </section>
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -97,7 +107,9 @@ export default async function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4">
-            <WritingHistory limit={5} />
+            <Suspense fallback={<p className="text-sm text-slate-500">Đang tải…</p>}>
+              <WritingHistory limit={5} />
+            </Suspense>
           </div>
         </section>
       </div>

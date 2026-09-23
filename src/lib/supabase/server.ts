@@ -26,14 +26,17 @@ export async function createClient() {
   )
 }
 
-// Email of the signed-in user, deduped per request (header + page both ask).
-export const getUserEmail = cache(async () => {
+// Verified JWT claims of the signed-in user (sub, email, user_metadata…), deduped per request so the header
+// and the page share one check. The project signs with ES256, so getClaims verifies locally — no Auth round trip.
+export const getClaims = cache(async () => {
   try {
     const supabase = await createClient()
     const { data } = await supabase.auth.getClaims()
-    return data?.claims.email
+    return data?.claims ?? null
   } catch (e) {
     unstable_rethrow(e) // keep Next's dynamic-rendering signal from cookies()
-    return undefined // ponytail: Supabase env missing -> render as logged out
+    return null // ponytail: Supabase env missing -> render as logged out
   }
 })
+
+export const getUserEmail = async () => (await getClaims())?.email

@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { AssessmentResultView, speak, useCanSpeak } from '@/components/speaking/assessment-result'
+import { AssessmentResultView } from '@/components/speaking/assessment-result'
+import { savedId, type SavedQuestion } from '@/lib/questions'
 import { READ_PASSAGES, TOPICS } from '@/lib/speaking/tasks'
 import { MAX_RECORDING_SEC, MIN_RECORDING_SEC, type AssessResponse, type Mode } from '@/lib/speaking/types'
 import { toWav16k } from '@/lib/speaking/wav'
@@ -32,16 +33,19 @@ function micError(e: unknown) {
   return 'Không thể bắt đầu ghi âm. Vui lòng thử lại.'
 }
 
-export function SpeakingPractice() {
+// `saved`: the user's own read/topic questions; `initialId` (from ?q=) preselects one of them.
+export function SpeakingPractice({ saved, initialId }: { saved: SavedQuestion[]; initialId?: string }) {
   const router = useRouter()
-  const canSpeak = useCanSpeak()
+  const init = saved.find((q) => q.id === initialId)
 
-  const [mode, setMode] = useState<Mode>('read')
-  const [taskId, setTaskId] = useState<Record<Mode, string>>({ read: READ_PASSAGES[0].id, topic: TOPICS[0].id })
+  const [mode, setMode] = useState<Mode>(init?.kind === 'topic' ? 'topic' : 'read')
+  const [taskId, setTaskId] = useState<Record<Mode, string>>({
+    read: init?.kind === 'read' ? savedId(init.id) : READ_PASSAGES[0].id,
+    topic: init?.kind === 'topic' ? savedId(init.id) : TOPICS[0].id,
+  })
   const [custom, setCustom] = useState<Record<Mode, string>>({ read: '', topic: '' })
   const [status, setStatus] = useState<Status>('idle')
   const [recSec, setRecSec] = useState(0)
-  const [waitSec, setWaitSec] = useState(0)
   const [audio, setAudio] = useState<{ blob: Blob; url: string } | null>(null)
   const [error, setError] = useState<{ message: string; login?: boolean } | null>(null)
   const [response, setResponse] = useState<AssessResponse | null>(null)
@@ -50,11 +54,15 @@ export function SpeakingPractice() {
   const startedAtRef = useRef(0)
 
   const isCustom = taskId[mode] === CUSTOM
+  const mine = saved.filter((q) => q.kind === mode)
+  const own = mine.find((q) => savedId(q.id) === taskId[mode])
   const passage = READ_PASSAGES.find((p) => p.id === taskId.read)
   const topic = TOPICS.find((t) => t.id === taskId.topic)
   const prompt = isCustom
     ? custom[mode].trim()
-    : mode === 'read'
+    : own
+      ? own.content.trim()
+      : mode === 'read'
       ? (passage?.text ?? '')
       : topic
         ? [topic.question, ...(topic.hints ?? []).map((h) => `- ${h}`)].join('\n')
@@ -79,13 +87,6 @@ export function SpeakingPractice() {
       setRecSec(Math.min(sec, MAX_RECORDING_SEC))
       if (sec >= MAX_RECORDING_SEC && recorderRef.current?.state === 'recording') recorderRef.current.stop()
     }, 250)
-    return () => clearInterval(id)
-  }, [status])
-
-  useEffect(() => {
-    if (status !== 'submitting') return
-    const t0 = Date.now()
-    const id = setInterval(() => setWaitSec(Math.floor((Date.now() - t0) / 1000)), 1000)
     return () => clearInterval(id)
   }, [status])
 
@@ -165,7 +166,6 @@ export function SpeakingPractice() {
       return
     }
     setError(null)
-    setWaitSec(0)
     setStatus('submitting')
 
     let wav: Blob
@@ -233,9 +233,14 @@ export function SpeakingPractice() {
         </p>
 
         <div className="mt-5">
-          <label htmlFor="task" className="text-sm font-medium text-slate-700">
-            {mode === 'read' ? 'Chọn đoạn văn' : 'Chọn chủ đề'}
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label htmlFor="task" className="text-sm font-medium text-slate-700">
+              {mode === 'read' ? 'Chọn đoạn văn' : 'Chọn chủ đề'}
+            </label>
+            <Link href={`/questions?kind=${mode}`} className="text-sm font-medium text-blue-700 hover:underline">
+              + Tạo câu hỏi của bạn
+            </Link>
+          </div>
           <select
             id="task"
             className={`${input} mt-1 bg-white`}
@@ -246,12 +251,23 @@ export function SpeakingPractice() {
               reset()
             }}
           >
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                [{t.level}] {t.title}
-              </option>
-            ))}
-            <option value={CUSTOM}>Tự nhập…</option>
+            <optgroup label="Đề mẫu">
+              {tasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  [{t.level}] {t.title}
+                </option>
+              ))}
+            </optgroup>
+            {mine.length > 0 && (
+              <optgroup label="Câu hỏi của tôi">
+                {mine.map((q) => (
+                  <option key={q.id} value={savedId(q.id)}>
+                    {q.title}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <option value={CUSTOM}>Tự nhập (không lưu)…</option>
           </select>
         </div>
 
@@ -275,17 +291,18 @@ export function SpeakingPractice() {
               {custom[mode].length}/{MAX_CHARS[mode]}
             </p>
           </div>
+        ) : own ? (
+          <div className="mt-4 rounded-xl bg-blue-50 p-5">
+            <p lang="en" className={`whitespace-pre-line text-lg leading-relaxed text-slate-800 ${mode === 'topic' ? 'font-semibold' : ''}`}>
+              {own.content}
+            </p>
+          </div>
         ) : mode === 'read' ? (
           passage && (
             <div className="mt-4 rounded-xl bg-blue-50 p-5">
               <p lang="en" className="text-lg leading-relaxed text-slate-800">
                 {passage.text}
               </p>
-              {canSpeak && (
-                <button type="button" onClick={() => speak(passage.text)} className={`${secondary} mt-4 text-sm`}>
-                  🔊 Nghe mẫu
-                </button>
-              )}
             </div>
           )
         ) : (
@@ -391,7 +408,7 @@ export function SpeakingPractice() {
                 aria-hidden
               />
               <span>
-                Đang chấm điểm phát âm{mode === 'topic' ? ' và nội dung' : ''}… {waitSec} giây
+                Đang chấm điểm phát âm{mode === 'topic' ? ' và nội dung' : ''}…
                 <span className="block text-xs text-blue-700/80">Quá trình này có thể mất 10–60 giây.</span>
               </span>
             </div>

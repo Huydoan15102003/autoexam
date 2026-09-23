@@ -24,6 +24,9 @@ export async function SiteHeader() {
             <Link href="/writing" className="px-1 text-sm font-medium text-slate-700 hover:text-blue-700">
               Luyện viết
             </Link>
+            <Link href="/questions" className="px-1 text-sm font-medium text-slate-700 hover:text-blue-700">
+              Câu hỏi
+            </Link>
             <Link href="/dashboard" className={primary}>
               Dashboard
             </Link>
