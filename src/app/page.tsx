@@ -37,6 +37,21 @@ const features = [
   },
 ]
 
+const highlights = [
+  {
+    title: 'Luyện nói',
+    desc: 'Azure Speech chấm phát âm đến từng từ và từng âm (IPA), độ trôi chảy, ngữ điệu; GPT-5 mini đánh giá từ vựng, ngữ pháp và mức độ bám sát chủ đề.',
+  },
+  {
+    title: 'Luyện viết VSTEP',
+    desc: 'Thư/email (Task 1) và bài luận (Task 2) được chấm theo 4 tiêu chí, quy đổi Bậc 3–5 (B1–C1), lỗi được tô sáng ngay trong bài.',
+  },
+  {
+    title: 'Kho câu hỏi',
+    desc: '21 đề mẫu từ A2 đến C1, tự tạo đề của riêng bạn và xem lại lịch sử để theo dõi tiến bộ.',
+  },
+]
+
 const steps = [
   { title: 'Tạo tài khoản', desc: 'Đăng ký miễn phí bằng email chỉ trong chưa đầy một phút.' },
   { title: 'Nói hoặc viết', desc: 'Chọn đề, ghi âm câu trả lời hoặc viết bài tiếng Anh ngay trên trình duyệt.' },
@@ -65,9 +80,27 @@ export default async function HomePage() {
               Luyện nói & viết tiếng Anh, <span className="text-blue-700">chấm điểm ngay</span> bằng AI
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-slate-600">
-              AutoExam chấm phát âm bằng Azure Speech, chấm nội dung bài nói và bài viết VSTEP bằng GPT-5 mini — biết
-              ngay mình sai ở đâu và cần cải thiện gì.
+              AutoExam giúp bạn tự luyện kỹ năng Nói và Viết tiếng Anh mỗi ngày. Chỉ cần ghi âm câu trả lời hoặc viết
+              bài ngay trên trình duyệt — AI chấm điểm trong vài giây, chỉ ra chính xác lỗi sai và gợi ý cách sửa bằng
+              tiếng Việt.
             </p>
+            <ul className="mt-5 space-y-3 text-slate-700">
+              {highlights.map((h) => (
+                <li key={h.title} className="flex gap-3">
+                  <span
+                    className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+                    aria-hidden
+                  >
+                    <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
+                      <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z" />
+                    </svg>
+                  </span>
+                  <span className="leading-relaxed">
+                    <strong className="font-semibold text-slate-900">{h.title}</strong> — {h.desc}
+                  </span>
+                </li>
+              ))}
+            </ul>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               {email ? (
                 <>
