@@ -59,6 +59,37 @@ test('finalizeScores: structure caps per task', () => {
   assert.deepEqual(finalizeScores('task1', s(3, 2, 1, 0), flags).scores, s(3, 2, 1, 0)) // caps never raise
 })
 
+test('finalizeScores: under-length caps task fulfilment', () => {
+  const at = (wordCount: number) => finalizeScores('task2', s(9, 9, 9, 9), { ...none, wordCount, minWords: 250 })
+  assert.deepEqual(at(260).scores, s(9, 9, 9, 9))
+  assert.deepEqual(at(260).notes, [])
+  assert.equal(at(230).scores.task_fulfilment, 7) // < 100%
+  assert.equal(at(180).scores.task_fulfilment, 5) // < 80%
+  assert.deepEqual(at(100).scores, s(3, 4, 9, 9)) // < 50%: organization too
+  assert.equal(at(100).notes.length, 1)
+  assert.match(at(100).notes[0], /100\/250 từ/)
+})
+
+test('finalizeScores: error density caps grammar / vocabulary, notes only when a score drops', () => {
+  const errs = (n: number, category: 'grammar' | 'vocabulary' | 'spelling' | 'punctuation') =>
+    Array.from({ length: n }, () => ({ category }))
+  const run = (raw: ReturnType<typeof s>, errors: ReturnType<typeof errs>) =>
+    finalizeScores('task2', raw, { ...none, wordCount: 200, minWords: 150, errors })
+  // 200 words: 13 grammar errors = 6.5/100 → ≤4; 9 = 4.5 → ≤5; 5 = 2.5 → ≤6; 3 = 1.5 → ≤7; 2 = 1.0 → no cap
+  assert.equal(run(s(8, 8, 8, 8), errs(13, 'grammar')).scores.grammar, 4)
+  assert.equal(run(s(8, 8, 8, 8), errs(9, 'grammar')).scores.grammar, 5)
+  assert.equal(run(s(8, 8, 8, 8), errs(5, 'grammar')).scores.grammar, 6)
+  assert.equal(run(s(8, 8, 8, 8), errs(3, 'grammar')).scores.grammar, 7)
+  assert.equal(run(s(8, 8, 8, 8), errs(2, 'grammar')).scores.grammar, 8)
+  // vocabulary + spelling share one density; punctuation is ignored
+  const mixed = run(s(8, 8, 8, 8), [...errs(3, 'vocabulary'), ...errs(2, 'spelling'), ...errs(9, 'punctuation')])
+  assert.deepEqual(mixed.scores, s(8, 8, 6, 8))
+  assert.equal(mixed.notes.length, 1)
+  assert.match(mixed.notes[0], /Từ vựng tối đa 6/)
+  // a cap above the model's own score changes nothing and adds no note
+  assert.deepEqual(run(s(5, 5, 5, 5), errs(5, 'grammar')).notes, [])
+})
+
 test('normalizeEssay and countWords', () => {
   assert.equal(normalizeEssay('  Dear Tom,  \r\n\r\n\r\n\r\nI am fine. \t\r\nBye\n\n'), 'Dear Tom,\n\nI am fine.\nBye')
   assert.equal(countWords(' one  two\n\nthree '), 3)

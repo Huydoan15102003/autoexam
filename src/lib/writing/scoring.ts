@@ -48,14 +48,55 @@ export function proficiencyFor(overall: number): Proficiency {
   return { level: 'Dưới Bậc 3', cefr: '<B1', certified: false }
 }
 
-// The prompt asks the LLM for these caps too; they are enforced here so the flags always bite.
+// Errors per 100 words → highest score the criterion may keep. The LLM tends to be generous on error-heavy texts,
+// so its own error list bounds its score. ponytail: fixed thresholds, tune against real graded essays if needed.
+const densityCap = (per100: number) => (per100 >= 6 ? 4 : per100 >= 4 ? 5 : per100 >= 2.5 ? 6 : per100 >= 1.5 ? 7 : 10)
+
+type ExtraCap = { caps: Partial<Scores>; note: string }
+
+// Deterministic caps beyond the LLM's judgement: under-length (VSTEP penalises it in Task Fulfilment) and error density.
+function extraCaps(wordCount: number, minWords: number, errors: Pick<WritingError, 'category'>[]): ExtraCap[] {
+  const out: ExtraCap[] = []
+  if (wordCount > 0 && minWords > 0) {
+    const r = wordCount / minWords
+    const short = `Bài viết có ${wordCount}/${minWords} từ tối thiểu`
+    if (r < 0.5) out.push({ caps: { task_fulfilment: 3, organization: 4 }, note: `${short} — điểm Hoàn thành nhiệm vụ và Tổ chức bài bị giới hạn.` })
+    else if (r < 0.8) out.push({ caps: { task_fulfilment: 5 }, note: `${short} — điểm Hoàn thành nhiệm vụ tối đa 5.` })
+    else if (r < 1) out.push({ caps: { task_fulfilment: 7 }, note: `${short} — điểm Hoàn thành nhiệm vụ tối đa 7.` })
+  }
+  if (wordCount > 0) {
+    const per100 = (cats: string[]) => (errors.filter((e) => cats.includes(e.category)).length / wordCount) * 100
+    const g = per100(['grammar'])
+    const v = per100(['vocabulary', 'spelling'])
+    if (densityCap(g) < 10)
+      out.push({ caps: { grammar: densityCap(g) }, note: `Nhiều lỗi ngữ pháp (${g.toFixed(1)} lỗi/100 từ) — điểm Ngữ pháp tối đa ${densityCap(g)}.` })
+    if (densityCap(v) < 10)
+      out.push({ caps: { vocabulary: densityCap(v) }, note: `Nhiều lỗi từ vựng/chính tả (${v.toFixed(1)} lỗi/100 từ) — điểm Từ vựng tối đa ${densityCap(v)}.` })
+  }
+  return out
+}
+
+// The prompt asks the LLM for the off-topic/structure caps too; they are enforced here so the flags always bite.
+// `notes` explains (in Vietnamese) every extra cap that actually lowered a score.
 export function finalizeScores(
   task: WritingTask,
   raw: Scores,
-  flags: { isOffTopic: boolean; missingStructure: boolean },
-): { scores: Scores; overall: number; proficiency: Proficiency } {
-  const caps: Partial<Scores>[] = [flags.isOffTopic ? OFF_TOPIC_CAPS : {}, flags.missingStructure ? STRUCTURE_CAPS[task] : {}]
-  const score = (c: Criterion) => Math.min(10, Math.max(0, Math.round(raw[c]) || 0), ...caps.map((k) => k[c] ?? 10))
+  flags: {
+    isOffTopic: boolean
+    missingStructure: boolean
+    wordCount?: number
+    minWords?: number
+    errors?: Pick<WritingError, 'category'>[]
+  },
+): { scores: Scores; overall: number; proficiency: Proficiency; notes: string[] } {
+  const extra = extraCaps(flags.wordCount ?? 0, flags.minWords ?? 0, flags.errors ?? [])
+  const caps: Partial<Scores>[] = [
+    flags.isOffTopic ? OFF_TOPIC_CAPS : {},
+    flags.missingStructure ? STRUCTURE_CAPS[task] : {},
+    ...extra.map((e) => e.caps),
+  ]
+  const base = (c: Criterion) => Math.min(10, Math.max(0, Math.round(raw[c]) || 0))
+  const score = (c: Criterion) => Math.min(base(c), ...caps.map((k) => k[c] ?? 10))
   const scores: Scores = {
     task_fulfilment: score('task_fulfilment'),
     organization: score('organization'),
@@ -64,7 +105,10 @@ export function finalizeScores(
   }
   const mean = (scores.task_fulfilment + scores.organization + scores.vocabulary + scores.grammar) / 4
   const overall = flags.isOffTopic ? Math.min(3, roundHalfEven(mean)) : roundHalfEven(mean)
-  return { scores, overall, proficiency: proficiencyFor(overall) }
+  const notes = extra
+    .filter((e) => (Object.keys(e.caps) as Criterion[]).some((c) => (e.caps[c] ?? 10) < base(c)))
+    .map((e) => e.note)
+  return { scores, overall, proficiency: proficiencyFor(overall), notes }
 }
 
 const squash = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase()

@@ -111,6 +111,11 @@ export function WritingResultView({ result }: { result: WritingResult }) {
             ⚠ {result.task === 'task1' ? 'Thiếu phần mở đầu/kết thư' : 'Thiếu thân bài'}
           </p>
         )}
+        {result.adjustments?.map((note) => (
+          <p key={note} className={banner}>
+            ⚠ {note}
+          </p>
+        ))}
         <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
           <div className="flex flex-col items-center gap-2">
             <Ring score={result.overall} max={10} label="Tổng điểm" size={128} />

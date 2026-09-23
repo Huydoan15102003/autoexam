@@ -32,6 +32,7 @@ export type WritingResult = {
   missingStructure: boolean // task1: no salutation AND no sign-off; task2: no body paragraphs
   feedback: Record<Criterion, CriterionFeedback>
   errors: WritingError[]
+  adjustments?: string[] // Vietnamese notes for code-enforced caps (word count, error density); absent on older rows
 }
 
 // Response of POST /api/writing/assess: 200 → WritingAssessResponse, otherwise { error: string } (Vietnamese)
