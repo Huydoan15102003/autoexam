@@ -79,7 +79,7 @@ export default async function DashboardPage() {
               href="/questions"
               className="rounded-lg border border-white/60 px-5 py-2.5 font-semibold text-white hover:bg-white/10"
             >
-              Câu hỏi của tôi
+              Kho câu hỏi
             </Link>
           </div>
         </section>

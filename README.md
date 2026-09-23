@@ -11,7 +11,11 @@ Stack: Next.js 16 (App Router) · Supabase (Auth + Postgres, `@supabase/ssr` coo
 - Optional email confirmation (`/auth/confirm` handles both `token_hash` and `code` links).
 - Session persists across reloads and tabs (HTTP-only cookies, refreshed in `src/proxy.ts`).
 - Protected `/dashboard`, `/practice`, `/writing` and `/questions`: logged-out visitors are redirected to `/login`.
-- **My questions** (`/questions`): users create their own practice questions (read-aloud passage, speaking topic, writing Task 1 or Task 2). The questions are stored in `custom_questions` (RLS: own rows only, max 200 per user). They appear under "Câu hỏi của tôi" in the practice pickers, and "Luyện ngay" opens `/practice?q=<id>` or `/writing?q=<id>` with that question selected.
+- **Question bank** (`/questions`, "Kho câu hỏi"): the bank holds all 21 built-in sample questions plus the user's own.
+  - **Question types:** read-aloud passage, speaking topic, writing Task 1 and Task 2, each with an optional CEFR level.
+  - **Browsing:** search that ignores Vietnamese accents, filters by type, source and level, and a detail dialog.
+  - **Your own questions:** create, edit and delete them in a native `<dialog>`. They are stored in `custom_questions` (RLS: own rows only, max 200 per user).
+  - **Practising:** "Luyện ngay" opens `/practice?q=<id>` or `/writing?q=<id>` with the question selected. `<id>` is a sample slug or a question uuid.
 - `profiles` table (full name) 1–1 with `auth.users`, created by a DB trigger, protected by RLS.
 
 ## Local development
@@ -36,7 +40,7 @@ The app builds and the public pages render without any env vars; auth needs the 
 ## Setting up Supabase later
 
 1. Create a project at [supabase.com](https://supabase.com/dashboard) (pick a region close to your users, e.g. Singapore).
-2. Open **SQL Editor** and run every file in `supabase/migrations/` **in order** (`0001_profiles.sql`, `0002_speaking_attempts.sql`, `0003_writing_attempts.sql`, `0004_custom_questions.sql`). The scripts are safe to re-run.
+2. Open **SQL Editor** and run every file in `supabase/migrations/` **in order** (`0001_profiles.sql`, `0002_speaking_attempts.sql`, `0003_writing_attempts.sql`, `0004_custom_questions.sql`, `0005_custom_questions_level_edit.sql`). The scripts are safe to re-run.
 3. Go to **Project Settings → API** (or **Connect**) and copy the **Project URL** and the **publishable key** into `.env.local` (and later into Vercel):
    ```
    SUPABASE_URL=https://<ref>.supabase.co

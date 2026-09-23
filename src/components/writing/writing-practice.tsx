@@ -63,16 +63,19 @@ function saveDraft(t: WritingTask, d: Draft | null) {
 const mineFor = (saved: SavedQuestion[], t: WritingTask): WritingPrompt[] =>
   saved.filter((q) => q.kind === t).map((q) => ({ id: savedId(q.id), title: q.title, prompt: q.content }))
 
-// `saved`: the user's own task1/task2 questions; `initialId` (from ?q=) preselects one of them.
+// `saved`: the user's own task1/task2 questions. `initialId` (from ?q=) preselects a saved question (uuid)
+// or a built-in prompt (slug) — both come from the question bank's "Luyện ngay".
 export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; initialId?: string }) {
   const router = useRouter()
 
   // frozen at mount: the draft restore below runs once against these
   const [boot] = useState(() => {
     const init = saved.find((q) => q.id === initialId)
-    const task: WritingTask = init?.kind === 'task2' ? 'task2' : 'task1'
+    const builtin = (['task1', 'task2'] as const).find((t) => PROMPTS[t].some((p) => p.id === initialId))
+    const task: WritingTask = init ? (init.kind === 'task2' ? 'task2' : 'task1') : (builtin ?? 'task1')
+    const pick = init ? savedId(init.id) : builtin && initialId ? initialId : null
     const ids = (t: WritingTask) => [...PROMPTS[t], ...mineFor(saved, t)].map((p) => p.id)
-    return { task, pick: init ? savedId(init.id) : null, ids: { task1: ids('task1'), task2: ids('task2') } }
+    return { task, pick, ids: { task1: ids('task1'), task2: ids('task2') } }
   })
   const [task, setTask] = useState<WritingTask>(boot.task)
   const [drafts, setDrafts] = useState<Record<WritingTask, Draft>>(() => {
@@ -199,9 +202,14 @@ export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; 
             <label htmlFor="prompt-id" className="text-sm font-medium text-slate-700">
               Chọn đề bài
             </label>
-            <Link href={`/questions?kind=${task}`} className="text-sm font-medium text-blue-700 hover:underline">
-              + Tạo câu hỏi của bạn
-            </Link>
+            <span className="flex gap-3 text-sm font-medium">
+              <Link href={`/questions?kind=${task}`} className="text-blue-700 hover:underline">
+                Kho câu hỏi
+              </Link>
+              <Link href={`/questions?create=${task}`} className="text-blue-700 hover:underline">
+                + Tạo mới
+              </Link>
+            </span>
           </div>
           <select
             id="prompt-id"

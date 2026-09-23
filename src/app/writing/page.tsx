@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: 'Luyện viết tiếng Anh' }
 export default async function WritingPage({ searchParams }: PageProps<'/writing'>) {
   if (!(await getClaims())) redirect('/login')
   const [{ q }, saved] = await Promise.all([searchParams, listQuestions(['task1', 'task2'])])
-  const initial = saved.find((s) => s.id === q)
+  const initialId = typeof q === 'string' ? q : undefined // saved uuid or built-in slug, resolved by the picker
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
@@ -20,7 +20,7 @@ export default async function WritingPage({ searchParams }: PageProps<'/writing'
         Viết thư, bài luận theo dạng đề VSTEP và nhận điểm, nhận xét, sửa lỗi chi tiết ngay lập tức.
       </p>
 
-      <WritingPractice saved={saved} initialId={initial?.id} key={initial?.id} />
+      <WritingPractice saved={saved} initialId={initialId} key={initialId} />
 
       <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Lịch sử bài viết</h2>

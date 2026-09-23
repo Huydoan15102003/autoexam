@@ -33,15 +33,18 @@ function micError(e: unknown) {
   return 'Không thể bắt đầu ghi âm. Vui lòng thử lại.'
 }
 
-// `saved`: the user's own read/topic questions; `initialId` (from ?q=) preselects one of them.
+// `saved`: the user's own read/topic questions. `initialId` (from ?q=) preselects a saved question (uuid)
+// or a built-in passage/topic (slug) — both come from the question bank's "Luyện ngay".
 export function SpeakingPractice({ saved, initialId }: { saved: SavedQuestion[]; initialId?: string }) {
   const router = useRouter()
   const init = saved.find((q) => q.id === initialId)
+  const initRead = init?.kind === 'read' ? savedId(init.id) : READ_PASSAGES.find((p) => p.id === initialId)?.id
+  const initTopic = init?.kind === 'topic' ? savedId(init.id) : TOPICS.find((t) => t.id === initialId)?.id
 
-  const [mode, setMode] = useState<Mode>(init?.kind === 'topic' ? 'topic' : 'read')
+  const [mode, setMode] = useState<Mode>(initTopic ? 'topic' : 'read')
   const [taskId, setTaskId] = useState<Record<Mode, string>>({
-    read: init?.kind === 'read' ? savedId(init.id) : READ_PASSAGES[0].id,
-    topic: init?.kind === 'topic' ? savedId(init.id) : TOPICS[0].id,
+    read: initRead ?? READ_PASSAGES[0].id,
+    topic: initTopic ?? TOPICS[0].id,
   })
   const [custom, setCustom] = useState<Record<Mode, string>>({ read: '', topic: '' })
   const [status, setStatus] = useState<Status>('idle')
@@ -237,9 +240,14 @@ export function SpeakingPractice({ saved, initialId }: { saved: SavedQuestion[];
             <label htmlFor="task" className="text-sm font-medium text-slate-700">
               {mode === 'read' ? 'Chọn đoạn văn' : 'Chọn chủ đề'}
             </label>
-            <Link href={`/questions?kind=${mode}`} className="text-sm font-medium text-blue-700 hover:underline">
-              + Tạo câu hỏi của bạn
-            </Link>
+            <span className="flex gap-3 text-sm font-medium">
+              <Link href={`/questions?kind=${mode}`} className="text-blue-700 hover:underline">
+                Kho câu hỏi
+              </Link>
+              <Link href={`/questions?create=${mode}`} className="text-blue-700 hover:underline">
+                + Tạo mới
+              </Link>
+            </span>
           </div>
           <select
             id="task"

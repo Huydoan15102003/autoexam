@@ -9,7 +9,7 @@ export async function listQuestions(kinds: QuestionKind[]): Promise<SavedQuestio
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('custom_questions')
-      .select('id, kind, title, content')
+      .select('id, kind, title, content, level, created_at')
       .in('kind', kinds)
       .order('created_at', { ascending: false })
     if (error) throw error
