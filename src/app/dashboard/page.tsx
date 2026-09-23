@@ -40,7 +40,12 @@ export default async function DashboardPage() {
 
       <div className="mt-8 grid gap-4 md:grid-cols-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2">
-          <h2 className="text-lg font-semibold">Thông tin tài khoản</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Thông tin tài khoản</h2>
+            <Link href="/account" className="text-sm font-medium text-blue-700 hover:underline">
+              Chỉnh sửa
+            </Link>
+          </div>
           <dl className="mt-4 space-y-3 text-sm">
             <div>
               <dt className="text-slate-500">Họ và tên</dt>

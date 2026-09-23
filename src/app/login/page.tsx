@@ -50,9 +50,14 @@ export default function LoginPage({
             />
           </div>
           <div>
-            <label htmlFor="password" className={label}>
-              Mật khẩu
-            </label>
+            <div className="flex items-baseline justify-between">
+              <label htmlFor="password" className={label}>
+                Mật khẩu
+              </label>
+              <Link href="/forgot-password" className="text-sm font-medium text-blue-700 hover:underline">
+                Quên mật khẩu?
+              </Link>
+            </div>
             <input
               id="password"
               name="password"

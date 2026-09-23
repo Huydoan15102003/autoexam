@@ -8,13 +8,16 @@ Stack: Next.js 16 (App Router) · Supabase (Auth + Postgres, `@supabase/ssr` coo
 
 - Landing page `/` with sign-up / log-in CTAs; the header shows the signed-in email and a Dashboard button.
 - Email + password auth (sign up with full name, log in, log out) via Server Actions, with friendly Vietnamese error messages (wrong password, email taken, weak password, invalid email, rate limit, unconfirmed email…).
-- Optional email confirmation (`/auth/confirm` handles both `token_hash` and `code` links).
+- Optional email confirmation (`/auth/confirm` handles both `token_hash` and `code` links, and redirects to a safe relative `next`).
+- **Forgot password** (`/forgot-password`): the user requests a reset email. The link goes through `/auth/confirm` to `/account?reset=1`, where they set a new password.
+- **Account page** (`/account`): change your full name or password (RLS plus a column grant mean users can only rename themselves).
+- Vietnamese 404 page (`not-found.tsx`) and error page (`error.tsx`).
 - Session persists across reloads and tabs (HTTP-only cookies, refreshed in `src/proxy.ts`).
-- Protected `/dashboard`, `/practice`, `/writing` and `/questions`: logged-out visitors are redirected to `/login`.
+- Protected `/dashboard`, `/practice`, `/writing`, `/questions` and `/account`: logged-out visitors are redirected to `/login`.
 - **Question bank** (`/questions`, "Kho câu hỏi"): the bank holds all 21 built-in sample questions plus the user's own.
   - **Question types:** read-aloud passage, speaking topic, writing Task 1 and Task 2, each with an optional CEFR level.
   - **Browsing:** search that ignores Vietnamese accents, filters by type, source and level, and a detail dialog.
-  - **Your own questions:** create, edit and delete them in a native `<dialog>`. They are stored in `custom_questions` (RLS: own rows only, max 200 per user).
+  - **Your own questions:** create, edit and delete them in a native `<dialog>`. Editing a sample saves an edited copy under "Của tôi"; the shared sample stays unchanged. `?edit=<id>` opens the editor, and the practice pickers link to it ("Sửa câu này"). They are stored in `custom_questions` (RLS: own rows only, max 200 per user).
   - **Practising:** "Luyện ngay" opens `/practice?q=<id>` or `/writing?q=<id>` with the question selected. `<id>` is a sample slug or a question uuid.
 - `profiles` table (full name) 1–1 with `auth.users`, created by a DB trigger, protected by RLS.
 
@@ -48,7 +51,7 @@ The app builds and the public pages render without any env vars; auth needs the 
    ```
 4. **Authentication → URL Configuration**:
    - **Site URL** = your production URL, e.g. `https://autoexam.vercel.app`.
-   - **Redirect URLs**: add `https://<prod-domain>/auth/confirm` and `http://localhost:3000/auth/confirm`.
+   - **Redirect URLs**: add `https://<prod-domain>/**` and `http://localhost:3000/**`. The wildcard is needed because the password-reset link carries a `?next=` query.
 5. **Authentication → Sign In / Providers → Email** — choose one:
    - **Simplest grading flow:** turn **Confirm email** off. Sign-up logs the user in immediately and lands on `/dashboard`.
    - **Keep confirmation on:** in **Authentication → Emails → Confirm signup**, change the link to
@@ -56,7 +59,8 @@ The app builds and the public pages render without any env vars; auth needs the 
      {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email
      ```
      so the link works even when opened in another browser/device. Note that Supabase's built-in email sender is heavily rate-limited and may only deliver to your team's addresses — configure custom SMTP (Resend, SendGrid…) under **Authentication → Emails → SMTP Settings** before graders sign up with personal emails.
-6. Restart `npm run dev` after editing `.env.local`.
+6. **Password reset emails** go through Supabase's mailer. The built-in sender is heavily rate-limited and may only deliver to your team's addresses, so configure custom SMTP before real users rely on "Quên mật khẩu".
+7. Restart `npm run dev` after editing `.env.local`.
 
 ## Deploy to Vercel
 

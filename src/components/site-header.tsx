@@ -31,9 +31,13 @@ export async function SiteHeader() {
               Dashboard
             </Link>
             <div className="flex w-full min-w-0 items-center justify-between gap-3 border-t border-slate-100 pt-2 sm:w-auto sm:border-0 sm:pt-0">
-              <span className="min-w-0 truncate text-sm text-slate-500 sm:max-w-56" title={email}>
+              <Link
+                href="/account"
+                className="min-w-0 truncate text-sm text-slate-500 hover:text-blue-700 sm:max-w-56"
+                title={`${email} — Tài khoản`}
+              >
                 {email}
-              </span>
+              </Link>
               <form action={signOut}>
                 <button type="submit" className={secondary}>
                   Đăng xuất

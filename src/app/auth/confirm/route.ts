@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const code = searchParams.get('code')
+  const next = searchParams.get('next')
+  // only same-site relative paths: "/x" but not "//evil.com"
+  const dest = next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
 
   const supabase = await createClient()
   let ok = false
@@ -17,6 +20,6 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.exchangeCodeForSession(code)).error
   }
 
-  if (ok) redirect('/dashboard')
+  if (ok) redirect(dest)
   redirect('/login?error=' + encodeURIComponent('Liên kết xác nhận không hợp lệ hoặc đã hết hạn.'))
 }

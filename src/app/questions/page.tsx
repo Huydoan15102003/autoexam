@@ -11,7 +11,7 @@ const asKind = (v: unknown) => (QUESTION_KINDS.includes(v as QuestionKind) ? (v 
 
 export default async function QuestionsPage({ searchParams }: PageProps<'/questions'>) {
   if (!(await getClaims())) redirect('/login')
-  const [{ kind, create }, mine] = await Promise.all([searchParams, listQuestions(QUESTION_KINDS)])
+  const [{ kind, create, edit }, mine] = await Promise.all([searchParams, listQuestions(QUESTION_KINDS)])
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
@@ -19,6 +19,7 @@ export default async function QuestionsPage({ searchParams }: PageProps<'/questi
         questions={[...mine.map(toBank), ...SAMPLE_QUESTIONS]}
         initialKind={asKind(kind) ?? 'all'}
         createKind={asKind(create)}
+        editId={typeof edit === 'string' ? edit : undefined}
       />
     </main>
   )

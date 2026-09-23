@@ -209,6 +209,14 @@ export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; 
               <Link href={`/questions?create=${task}`} className="text-blue-700 hover:underline">
                 + Tạo mới
               </Link>
+              {draft.promptId !== CUSTOM && (
+                <Link
+                  href={`/questions?edit=${encodeURIComponent(draft.promptId.replace(/^q:/, ''))}`}
+                  className="text-blue-700 hover:underline"
+                >
+                  Sửa câu này
+                </Link>
+              )}
             </span>
           </div>
           <select

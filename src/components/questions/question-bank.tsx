@@ -109,25 +109,32 @@ export function QuestionBank({
   questions,
   initialKind,
   createKind,
+  editId,
 }: {
   questions: BankQuestion[] // the user's own first (newest first), then the samples
   initialKind: QuestionKind | 'all'
   createKind?: QuestionKind // from ?create=<kind>: open the create dialog on arrival
+  editId?: string // from ?edit=<id>: open that question in the editor on arrival
 }) {
   const [kind, setKind] = useState<QuestionKind | 'all'>(initialKind)
   const [source, setSource] = useState<Source>('all')
   const [level, setLevel] = useState<Level | 'all'>('all')
   const [search, setSearch] = useState('')
   const [viewing, setViewing] = useState<BankQuestion | null>(null)
-  const [editing, setEditing] = useState<Editing>(createKind ? { kind: createKind } : null)
+  const [editing, setEditing] = useState<Editing>(() => {
+    if (createKind) return { kind: createKind }
+    const q = editId ? questions.find((x) => x.id === editId) : undefined
+    return q ? { kind: q.kind, question: q } : null
+  })
 
-  // drop ?create= so a reload doesn't reopen the dialog
+  // drop ?create= / ?edit= so a reload doesn't reopen the dialog
   useEffect(() => {
-    if (!createKind) return
+    if (!createKind && !editId) return
     const url = new URL(window.location.href)
     url.searchParams.delete('create')
+    url.searchParams.delete('edit')
     window.history.replaceState(null, '', url)
-  }, [createKind])
+  }, [createKind, editId])
 
   const closeEditor = useCallback(() => setEditing(null), [])
 
@@ -286,14 +293,15 @@ export function QuestionBank({
                 <button type="button" onClick={() => setViewing(q)} className={ghostSm}>
                   Xem
                 </button>
-                {q.source === 'mine' && (
-                  <>
-                    <button type="button" onClick={() => setEditing({ kind: q.kind, question: q })} className={ghostSm}>
-                      Sửa
-                    </button>
-                    <DeleteQuestionButton id={q.id} />
-                  </>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setEditing({ kind: q.kind, question: q })}
+                  className={ghostSm}
+                  title={q.source === 'sample' ? 'Sửa và lưu thành câu hỏi của bạn' : undefined}
+                >
+                  Sửa
+                </button>
+                {q.source === 'mine' && <DeleteQuestionButton id={q.id} />}
                 <Link href={practiceHref(q)} className={primarySm}>
                   Luyện ngay
                 </Link>
@@ -316,18 +324,16 @@ export function QuestionBank({
             </div>
             <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <span className="mr-auto text-xs text-slate-400 tabular-nums">{wordCount(viewing.content)} từ</span>
-              {viewing.source === 'mine' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing({ kind: viewing.kind, question: viewing })
-                    setViewing(null)
-                  }}
-                  className={ghostSm}
-                >
-                  Sửa
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing({ kind: viewing.kind, question: viewing })
+                  setViewing(null)
+                }}
+                className={ghostSm}
+              >
+                Sửa
+              </button>
               <Link href={practiceHref(viewing)} className={primarySm}>
                 Luyện ngay
               </Link>
@@ -338,12 +344,14 @@ export function QuestionBank({
 
       <Modal
         open={editing !== null}
-        title={editing?.question ? 'Sửa câu hỏi' : 'Tạo câu hỏi mới'}
+        title={
+          editing?.question ? (editing.question.source === 'sample' ? 'Sửa đề mẫu' : 'Sửa câu hỏi') : 'Tạo câu hỏi mới'
+        }
         onClose={closeEditor}
       >
         {editing && (
           <QuestionForm
-            key={editing.question?.id ?? 'new'}
+            key={editing.question ? `${editing.question.source}:${editing.question.id}` : 'new'}
             question={editing.question}
             defaultKind={editing.kind}
             onSaved={closeEditor}

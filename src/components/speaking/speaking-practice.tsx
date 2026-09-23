@@ -247,6 +247,14 @@ export function SpeakingPractice({ saved, initialId }: { saved: SavedQuestion[];
               <Link href={`/questions?create=${mode}`} className="text-blue-700 hover:underline">
                 + Tạo mới
               </Link>
+              {taskId[mode] !== CUSTOM && (
+                <Link
+                  href={`/questions?edit=${encodeURIComponent(taskId[mode].replace(/^q:/, ''))}`}
+                  className="text-blue-700 hover:underline"
+                >
+                  Sửa câu này
+                </Link>
+              )}
             </span>
           </div>
           <select

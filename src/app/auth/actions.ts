@@ -4,14 +4,15 @@ import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getClaims } from '@/lib/supabase/server'
 
-export type AuthState = { error?: string; email?: string; fullName?: string } | undefined
+export type AuthState = { error?: string; ok?: string; email?: string; fullName?: string } | undefined
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const NETWORK_ERROR = 'Không kết nối được máy chủ xác thực. Vui lòng thử lại sau.'
 const EMAIL_TAKEN = 'Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.'
 const RATE_LIMIT = 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.'
+const SESSION_EXPIRED = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
 
 const AUTH_MESSAGES: Record<string, string> = {
   invalid_credentials: 'Email hoặc mật khẩu không đúng.',
@@ -24,6 +25,10 @@ const AUTH_MESSAGES: Record<string, string> = {
   over_email_send_rate_limit: RATE_LIMIT,
   over_request_rate_limit: RATE_LIMIT,
   signup_disabled: 'Hệ thống tạm thời không cho phép đăng ký tài khoản mới.',
+  same_password: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  reauthentication_needed: 'Vui lòng đăng nhập lại trước khi đổi mật khẩu.',
+  session_not_found: SESSION_EXPIRED,
+  session_expired: SESSION_EXPIRED,
 }
 
 function authMessage(error: AuthError) {
@@ -100,4 +105,59 @@ export async function signOut() {
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
   redirect('/login')
+}
+
+// Always the same answer, whether or not the email has an account (no user enumeration).
+export async function requestPasswordReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = text(formData, 'email').toLowerCase()
+  if (!EMAIL_RE.test(email)) return { error: 'Email không hợp lệ.', email }
+
+  const auth = await getAuth()
+  if (!auth) return { error: NETWORK_ERROR, email }
+
+  const origin = (await headers()).get('origin') ?? process.env.SITE_URL
+  const { error } = await auth.resetPasswordForEmail(email, {
+    redirectTo: origin ? `${origin}/auth/confirm?next=${encodeURIComponent('/account?reset=1')}` : undefined,
+  })
+  if (error) return { error: authMessage(error), email }
+  return {
+    ok: 'Nếu email này đã đăng ký, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư (cả mục Spam).',
+  }
+}
+
+export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const password = String(formData.get('password') ?? '')
+  const confirm = String(formData.get('confirm') ?? '')
+  if (password.length < 6) return { error: 'Mật khẩu phải có ít nhất 6 ký tự.' }
+  if (password !== confirm) return { error: 'Mật khẩu nhập lại không khớp.' }
+
+  if (!(await getClaims())) return { error: SESSION_EXPIRED }
+  const auth = await getAuth()
+  if (!auth) return { error: NETWORK_ERROR }
+
+  const { error } = await auth.updateUser({ password })
+  if (error) return { error: authMessage(error) }
+  return { ok: 'Đã đổi mật khẩu. Lần đăng nhập sau hãy dùng mật khẩu mới.' }
+}
+
+export async function updateProfile(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const fullName = text(formData, 'full_name')
+  if (!fullName) return { error: 'Vui lòng nhập họ và tên.', fullName }
+  if (fullName.length > 100) return { error: 'Họ và tên tối đa 100 ký tự.', fullName }
+
+  const claims = await getClaims()
+  if (!claims) return { error: SESSION_EXPIRED, fullName }
+  const supabase = await createClient()
+  // RLS + column grant: users may only rename themselves
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName })
+    .eq('id', claims.sub)
+    .select('id')
+  if (error || !data?.length) {
+    if (error) console.error('profiles update failed:', error.message)
+    return { error: 'Không cập nhật được hồ sơ. Vui lòng thử lại.', fullName }
+  }
+  revalidatePath('/', 'layout')
+  return { ok: 'Đã cập nhật họ và tên.', fullName }
 }

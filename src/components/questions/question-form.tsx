@@ -15,7 +15,8 @@ const PLACEHOLDER: Record<QuestionKind, string> = {
   task2: 'Ví dụ: Some people think that… To what extent do you agree or disagree? You should write at least 250 words.',
 }
 
-// Create (no `question`) or edit the user's own question. Calls onSaved once the server confirms.
+// Create (no `question`), edit the user's own question, or save an edited copy of a sample question.
+// Calls onSaved once the server confirms.
 export function QuestionForm({
   question,
   defaultKind,
@@ -28,6 +29,7 @@ export function QuestionForm({
   onCancel: () => void
 }) {
   const [state, formAction, pending] = useActionState(saveQuestion, undefined)
+  const own = question?.source === 'mine'
   const initialKind = state?.kind ?? question?.kind ?? defaultKind
   const [kind, setKind] = useState<QuestionKind>(initialKind)
   const [length, setLength] = useState((state?.content ?? question?.content ?? '').length)
@@ -38,7 +40,12 @@ export function QuestionForm({
 
   return (
     <form action={formAction} className="space-y-4">
-      {question && <input type="hidden" name="id" value={question.id} />}
+      {own && <input type="hidden" name="id" value={question.id} />}
+      {question && !own && (
+        <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          Đề mẫu dùng chung nên không bị thay đổi — bản bạn sửa sẽ được lưu vào “Câu hỏi của tôi”.
+        </p>
+      )}
       {state?.error && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {state.error}
@@ -132,7 +139,7 @@ export function QuestionForm({
           disabled={pending}
           className="rounded-lg bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 disabled:opacity-60"
         >
-          {pending ? 'Đang lưu…' : question ? 'Lưu thay đổi' : 'Tạo câu hỏi'}
+          {pending ? 'Đang lưu…' : own ? 'Lưu thay đổi' : question ? 'Lưu thành câu hỏi của tôi' : 'Tạo câu hỏi'}
         </button>
       </div>
     </form>
