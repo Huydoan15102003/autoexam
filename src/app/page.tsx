@@ -40,15 +40,15 @@ const features = [
 const highlights = [
   {
     title: 'Luyện nói',
-    desc: 'Azure Speech chấm phát âm đến từng từ và từng âm (IPA), độ trôi chảy, ngữ điệu; GPT-5 mini đánh giá từ vựng, ngữ pháp và mức độ bám sát chủ đề.',
+    desc: 'AI chấm phát âm đến từng từ, độ trôi chảy, ngữ điệu, cùng từ vựng và ngữ pháp.',
   },
   {
     title: 'Luyện viết VSTEP',
-    desc: 'Thư/email (Task 1) và bài luận (Task 2) được chấm theo 4 tiêu chí, quy đổi Bậc 3–5 (B1–C1), lỗi được tô sáng ngay trong bài.',
+    desc: 'chấm thư và bài luận theo 4 tiêu chí, quy đổi Bậc 3–5, lỗi được tô sáng ngay trong bài.',
   },
   {
-    title: 'Kho câu hỏi',
-    desc: '21 đề mẫu từ A2 đến C1, tự tạo đề của riêng bạn và xem lại lịch sử để theo dõi tiến bộ.',
+    title: 'Tài khoản an toàn',
+    desc: 'đăng nhập một lần, tải lại trang hay mở tab mới vẫn giữ phiên; dữ liệu của mỗi người được tách riêng hoàn toàn.',
   },
 ]
 
@@ -80,9 +80,10 @@ export default async function HomePage() {
               Luyện nói & viết tiếng Anh, <span className="text-blue-700">chấm điểm ngay</span> bằng AI
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-slate-600">
-              AutoExam giúp bạn tự luyện kỹ năng Nói và Viết tiếng Anh mỗi ngày. Chỉ cần ghi âm câu trả lời hoặc viết
-              bài ngay trên trình duyệt — AI chấm điểm trong vài giây, chỉ ra chính xác lỗi sai và gợi ý cách sửa bằng
-              tiếng Việt.
+              AutoExam là ứng dụng giáo dục giúp bạn tự luyện kỹ năng Nói và Viết tiếng Anh. Tạo tài khoản miễn phí chỉ
+              với <strong className="font-semibold text-slate-800">họ tên, email và mật khẩu</strong> để lưu toàn bộ kết
+              quả luyện tập vào <strong className="font-semibold text-slate-800">Dashboard cá nhân</strong> — dữ liệu
+              của bạn được bảo mật và chỉ riêng bạn xem được.
             </p>
             <ul className="mt-5 space-y-3 text-slate-700">
               {highlights.map((h) => (
