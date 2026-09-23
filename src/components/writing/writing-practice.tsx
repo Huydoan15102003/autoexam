@@ -172,13 +172,13 @@ export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; 
   return (
     <div className="space-y-4">
       <section className={card}>
-        <div role="tablist" aria-label="Dạng bài" className="inline-flex rounded-xl bg-slate-100 p-1">
+        <div role="tablist" aria-label="Dạng bài" className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 sm:inline-grid">
           {(
             [
-              ['task1', 'Task 1 — Thư/Email'],
-              ['task2', 'Task 2 — Bài luận'],
+              ['task1', 'Task 1', 'Thư/Email'],
+              ['task2', 'Task 2', 'Bài luận'],
             ] as const
-          ).map(([t, label]) => (
+          ).map(([t, label, sub]) => (
             <button
               key={t}
               type="button"
@@ -189,6 +189,7 @@ export function WritingPractice({ saved, initialId }: { saved: SavedQuestion[]; 
               className={`rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60 ${task === t ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
             >
               {label}
+              <span className="block text-xs font-normal opacity-80 sm:ml-1 sm:inline sm:text-sm">{sub}</span>
             </button>
           ))}
         </div>

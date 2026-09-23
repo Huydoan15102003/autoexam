@@ -183,8 +183,8 @@ export function QuestionBank({
       </div>
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <label className="relative flex-1">
+        <div className="grid grid-cols-2 gap-3 sm:flex">
+          <label className="relative col-span-2 flex-1">
             <span className="sr-only">Tìm kiếm câu hỏi</span>
             <svg
               viewBox="0 0 24 24"
@@ -230,7 +230,7 @@ export function QuestionBank({
           </select>
         </div>
 
-        <div role="tablist" aria-label="Loại câu hỏi" className="mt-3 flex gap-1 overflow-x-auto">
+        <div role="tablist" aria-label="Loại câu hỏi" className="mt-3 flex flex-wrap gap-1">
           {(['all', ...QUESTION_KINDS] as const).map((k) => (
             <button
               key={k}

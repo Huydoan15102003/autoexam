@@ -38,8 +38,8 @@ export default async function DashboardPage() {
         </form>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-5">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:col-span-2">
+      <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Thông tin tài khoản</h2>
             <Link href="/account" className="text-sm font-medium text-blue-700 hover:underline">
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
           </dl>
         </section>
 
-        <section className="flex flex-col justify-between gap-6 rounded-2xl bg-blue-700 p-6 text-white shadow-sm md:col-span-3">
+        <section className="flex flex-col justify-between gap-6 rounded-2xl bg-blue-700 p-6 text-white shadow-sm lg:col-span-3">
           <div>
             <h2 className="text-xl font-semibold">Luyện nói & viết với AI</h2>
             <p className="mt-2 text-blue-100">
@@ -70,19 +70,19 @@ export default async function DashboardPage() {
               lỗi chỉ trong vài giây.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/practice" className="rounded-lg bg-white px-5 py-2.5 font-semibold text-blue-800 hover:bg-blue-50">
+          <div className="grid gap-3 sm:flex sm:flex-wrap">
+            <Link href="/practice" className="rounded-lg bg-white px-5 py-2.5 text-center font-semibold text-blue-800 hover:bg-blue-50">
               Bắt đầu luyện nói
             </Link>
             <Link
               href="/writing"
-              className="rounded-lg border border-white/60 px-5 py-2.5 font-semibold text-white hover:bg-white/10"
+              className="rounded-lg border border-white/60 px-5 py-2.5 text-center font-semibold text-white hover:bg-white/10"
             >
               Bắt đầu luyện viết
             </Link>
             <Link
               href="/questions"
-              className="rounded-lg border border-white/60 px-5 py-2.5 font-semibold text-white hover:bg-white/10"
+              className="rounded-lg border border-white/60 px-5 py-2.5 text-center font-semibold text-white hover:bg-white/10"
             >
               Kho câu hỏi
             </Link>
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         </section>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">Bài nói gần đây</h2>
